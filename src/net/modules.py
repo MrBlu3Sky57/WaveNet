@@ -87,4 +87,29 @@ class Output(nn.Module):
         return self.blocks.forward(inp)
 
 class WaveNet(nn.Module):
-    pass
+    """
+    A WaveNet with base 2 exponential dilation
+    """
+    def __init__(self, channels: tuple[int], kernel_size: tuple[int], skip_size: int, out_size: tuple[int]):
+        super().__init__()
+        self.blocks = []
+
+        # Big Ugly Loop :(
+        for i, (c_in, c_hidden, c_out, k) in enumerate(zip(channels, channels[1:], channels[2:], kernel_size)):
+            self.blocks.append(WaveNetBlock(
+                in_channels=c_in,
+                hidden_channels=c_hidden,
+                out_channels=c_out,
+                skip_channels=skip_size,
+                kernel_size=k,
+                dilation=2**i
+            ))
+        self.out = Output(out_size)
+        self.skip_size = skip_size
+
+    def forward(self, inp: torch.Tensor):
+        skip_aggregate = torch.zeros((inp.shape[0], self.skip_size, inp.shape[2]))
+        for block in self.blocks:
+            inp, skip = block.forward(inp)
+            skip_aggregate += skip
+        return self.out.forward(skip_aggregate)
