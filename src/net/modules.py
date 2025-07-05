@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 
 class DilatedCausalConv1d(nn.Module):
-    # Input should be in shape: (N, K, T) where K is the Channel sizeß
+    # Input should be in shape: (N, K, T) where K is the Channel size
     def __init__(self, in_channels: int, out_channels: int, kernel_size: int, dilation: int):
         super().__init__()
         self.conv = torch.nn.Conv1d(
@@ -115,7 +115,7 @@ class WaveNet(nn.Module):
         self.out = Output(out_size)
         self.skip_size = skip_size
 
-    def forward(self, inp: torch.Tensor):
+    def forward(self, inp: torch.Tensor) -> torch.Tensor:
         val = inp.detach().clone() # Don't mutate input
         skip_aggregate = torch.zeros((val.shape[0], self.skip_size, val.shape[2]))
         for block in self.blocks:
