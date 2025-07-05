@@ -20,7 +20,7 @@ class DilatedCausalConv1d(nn.Module):
     def forward(self, inp: torch.Tensor) -> torch.Tensor:
         inp = nn.functional.pad(inp, pad=(self.pad_size, 0), mode='constant', value=0)
 
-        return self.conv.forward(inp)
+        return self.conv(inp)
 
 class GatedActivation(nn.Module):
     def __init__(self):
@@ -28,7 +28,7 @@ class GatedActivation(nn.Module):
         self.gate_act = nn.Sigmoid()
         self.filter_act = nn.Tanh()
     def forward(self, gate_unact: torch.Tensor, filtered_unact: torch.Tensor):
-        return self.gate_act.forward(gate_unact) * self.filter_act(filtered_unact)
+        return self.gate_act(gate_unact) * self.filter_act(filtered_unact)
 
 class Conv1x1(nn.Module):
     def __init__(self, in_channels: int, out_channels: int):
@@ -40,13 +40,19 @@ class Conv1x1(nn.Module):
         )
 
     def forward(self, inp: torch.Tensor) -> torch.Tensor:
-        return self.conv.forward(inp)
+        return self.conv(inp)
 
 class WaveNetBlock(nn.Module):
     def __init__(self, in_channels: int, hidden_channels: int, out_channels: int, skip_channels: int,
                 kernel_size: int, dilation: int):
         super().__init__()
-        self.conv = DilatedCausalConv1d(
+        self.filter_conv = DilatedCausalConv1d(
+                in_channels=in_channels,
+                out_channels=hidden_channels,
+                kernel_size=kernel_size,
+                dilation=dilation
+                )
+        self.gated_conv = DilatedCausalConv1d(
                 in_channels=in_channels,
                 out_channels=hidden_channels,
                 kernel_size=kernel_size,
@@ -57,8 +63,10 @@ class WaveNetBlock(nn.Module):
         self.skip_proj = Conv1x1(hidden_channels, skip_channels)
 
     def forward(self, inp: torch.Tensor) -> tuple[torch.Tensor]:
-        out = self.conv.forward(inp)
-        out = self.gated_act(inp)
+        filter_out = self.filter_conv(inp)
+        gated_out = self.gated_conv(inp)
+
+        out = self.gated_act(gated_out, filter_out)
 
         skip = self.skip_proj(out)
         out = self.out_proj(out)
@@ -81,10 +89,10 @@ class Output(nn.Module):
             self.blocks.append(nn.ReLU())
         self.blocks.pop(-1)
         self.blocks.append(Sample())
-        self.blocks.append(nn.Softmax())
+        self.blocks.append(nn.Softmax(dim=1))
 
     def forward(self, inp: torch.Tensor) -> torch.Tensor:
-        return self.blocks.forward(inp)
+        return self.blocks(inp)
 
 class WaveNet(nn.Module):
     """
@@ -108,8 +116,10 @@ class WaveNet(nn.Module):
         self.skip_size = skip_size
 
     def forward(self, inp: torch.Tensor):
-        skip_aggregate = torch.zeros((inp.shape[0], self.skip_size, inp.shape[2]))
+        val = inp.detach().clone() # Don't mutate input
+        skip_aggregate = torch.zeros((val.shape[0], self.skip_size, val.shape[2]))
         for block in self.blocks:
-            inp, skip = block.forward(inp)
+            res, skip = block.forward(val)
+            val += res
             skip_aggregate += skip
         return self.out.forward(skip_aggregate)
