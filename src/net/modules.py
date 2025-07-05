@@ -100,7 +100,7 @@ class WaveNet(nn.Module):
     """
     def __init__(self, channels: tuple[int], kernel_size: tuple[int], skip_size: int, out_size: tuple[int]):
         super().__init__()
-        self.blocks = []
+        self.blocks = nn.ModuleList()
 
         # Big Ugly Loop :(
         for i, (c_in, c_hidden, c_out, k) in enumerate(zip(channels, channels[1:], channels[2:], kernel_size)):
