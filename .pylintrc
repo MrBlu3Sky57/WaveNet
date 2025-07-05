@@ -1,0 +1,63 @@
+[MASTER]
+ignore=tests, venv
+jobs=1
+load-plugins=
+extension-pkg-whitelist=torch
+
+[MESSAGES CONTROL]
+disable=
+    missing-docstring,
+    too-few-public-methods,
+    invalid-name,
+    no-member,
+    duplicate-code,
+    fixme,
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    too-many-instance-attributes,
+    too-many-return-statements,
+    consider-using-f-string,
+    W0212,
+    W0201
+
+[REPORTS]
+output-format=colorized
+reports=no
+score=yes
+
+[BASIC]
+good-names=i,j,k,x,y,z,np,op,T
+variable-rgx=^[a-z_][a-z0-9_]{0,30}$
+argument-rgx=^[a-z_][a-z0-9_]{0,30}$
+attr-rgx=^[a-z_][a-z0-9_]{0,30}$
+function-rgx=^[a-z_][a-z0-9_]{0,30}$
+class-rgx=^[A-Z][a-zA-Z0-9]+$
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+
+[FORMAT]
+max-line-length=100
+indent-string='    '
+expected-line-ending-format=LF
+
+[TYPECHECK]
+generated-members=numpy.*,np.*
+
+[DESIGN]
+max-args=7
+max-locals=25
+max-returns=10
+max-branches=15
+max-statements=80
+max-attributes=15
+
+[SIMILARITIES]
+min-similarity-lines=5
+ignore-comments=yes
+ignore-docstrings=yes
+ignore-imports=yes
+
+[IMPORTS]
+known-standard-library=torch
+known-third-party=
