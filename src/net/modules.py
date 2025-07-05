@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 
 class DilatedCausalConv1d(nn.Module):
+    # Input should be in shape: (N, K, T) where K is the Channel sizeß
     def __init__(self, in_channels: int, out_channels: int, kernel_size: int, dilation: int):
         super().__init__()
         self.conv = torch.nn.Conv1d(
@@ -17,7 +18,6 @@ class DilatedCausalConv1d(nn.Module):
         self.pad_size = (kernel_size - 1) * (dilation + 1)
 
     def forward(self, inp: torch.Tensor) -> torch.Tensor:
-        inp = torch.transpose(inp, 1, 2) # Swap channel and time dimensions
         inp = nn.functional.pad(inp, pad=(self.pad_size, 0), mode='constant', value=0)
 
         return self.conv.forward(inp)
@@ -65,8 +65,26 @@ class WaveNetBlock(nn.Module):
 
         return (out, skip)
 
+class Sample(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, inp: torch.Tensor) -> torch.Tensor:
+        return inp[:, :, -1]
+
 class Output(nn.Module):
-    pass
+    def __init__(self, size: tuple[int]):
+        super().__init__()
+        self.blocks = nn.Sequential()
+        for l1, l2 in zip(size, size[1:]):
+            self.blocks.append(Conv1x1(l1, l2))
+            self.blocks.append(nn.ReLU())
+        self.blocks.pop(-1)
+        self.blocks.append(Sample())
+        self.blocks.append(nn.Softmax())
+
+    def forward(self, inp: torch.Tensor) -> torch.Tensor:
+        return self.blocks.forward(inp)
 
 class WaveNet(nn.Module):
     pass
