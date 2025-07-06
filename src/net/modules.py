@@ -80,6 +80,19 @@ class Sample(nn.Module):
     def forward(self, inp: torch.Tensor) -> torch.Tensor:
         return inp[:, :, -1]
 
+class Emb(nn.Module):
+    def __init__(self, emb_dim: int, num_embs: int):
+        super().__init__()
+        self.emb = nn.Embedding(num_embs, emb_dim)
+
+    def forward(self, inp: torch.Tensor) -> torch.Tensor:
+        if inp.ndim == 3:
+            return torch.transpose(self.emb(inp), 1, 2)
+        elif inp.ndim == 2:
+            return self.emb(inp).T
+        else:
+            raise NotImplementedError
+
 class Output(nn.Module):
     def __init__(self, size: tuple[int]):
         super().__init__()
@@ -98,10 +111,10 @@ class WaveNet(nn.Module):
     """
     A WaveNet with base 2 exponential dilation
     """
-    def __init__(self, channels: tuple[int], kernel_size: tuple[int], skip_size: int, out_size: tuple[int]):
+    def __init__(self, emb_dim: int, num_embs: int, channels: tuple[int], kernel_size: tuple[int], skip_size: int, out_size: tuple[int]):
         super().__init__()
         self.blocks = nn.ModuleList()
-
+        self.blocks.append(Emb(emb_dim=emb_dim, num_embs=num_embs))
         # Big Ugly Loop :(
         for i, (c_in, c_hidden, c_out, k) in enumerate(zip(channels, channels[1:], channels[2:], kernel_size)):
             self.blocks.append(WaveNetBlock(
